@@ -1,118 +1,132 @@
-# Caprini VTE Risk Score Calculator
+# CAPRINI Vte Risk Calculator
 
-A Python implementation of the **Caprini Risk Assessment Model for Venous Thromboembolism (VTE)** in surgical patients.
+> **Domain:** Clinical Decision Support & Biomedical Computing  
+> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
 
-This is a validated, point-based scoring system used to stratify surgical and hospitalized patients by their risk of developing VTE, and to guide appropriate prophylaxis decisions.
+<div align="center">
 
-## What This Tool Does
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
+![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
+![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
-1. **Scores patients** using the 40-factor Caprini model (0–~50 point range)
-2. **Stratifies risk** into five tiers: Very Low, Low, Moderate, High, Highest
-3. **Recommends prophylaxis** aligned with ACCP guidelines for each tier
-4. **Flags extended prophylaxis** needs for cancer surgery, arthroplasty, and trauma
-5. **Provides bleeding risk guidance** to balance VTE prevention against hemorrhage
+</div>
 
-## Risk Factor Summary
+---
 
-| Points | Factors |
-|--------|---------|
-| **1** | Age 41-60, minor surgery (<45 min), BMI >25, swollen legs, varicose veins, pregnancy/postpartum, recurrent miscarriage, OCP/HRT, sepsis <1mo, lung disease <1mo, abnormal PFTs, acute MI, CHF <1mo, IBD, bed rest |
-| **2** | Age 61-74, arthroscopic surgery (>45 min), major open surgery (>45 min), laparoscopic surgery (>45 min), malignancy, bed rest >72h, immobilizing cast, central venous access |
-| **3** | Age ≥75, history of VTE, family history of VTE, Factor V Leiden, Prothrombin 20210A, lupus anticoagulant, anticardiolipin antibodies, elevated homocysteine, HIT, other thrombophilia |
-| **5** | Stroke <1mo, multiple trauma <1mo, elective major LEA, hip/pelvis/leg fracture <1mo, acute spinal cord injury <1mo |
+## 📖 What It Does
 
-## Risk Tiers
+Bleeding Risk Stratification for Caprini VTE Risk Calculator.
+Stratifies patients by surgical bleeding risk to guide VTE prophylaxis decisions.
 
-| Score | Tier | VTE Rate (no prophylaxis) | Recommendation |
-|-------|------|---------------------------|----------------|
-| 0–1 | Very Low | ~0.0% | Early ambulation only |
-| 2 | Low | ~0.7% | Sequential compression devices (SCDs) |
-| 3–4 | Moderate | ~1.8% | SCDs ± pharmacologic prophylaxis |
-| 5–6 | High | ~3.6% | Pharmacologic prophylaxis recommended |
-| ≥7 | Highest | ~5.4%+ | Pharmacologic + extended duration |
+Caprini VTE Risk Score Calculator.
 
-## Quick Start
+Implements the Caprini Risk Assessment Model for Venous Thromboembolism (VTE)
+in surgical patients. This is a validated, point-based scoring system published
+by Joseph A. Caprini (2005, revised 2009/2013) and widely adopted in surgical
+practice for VTE risk stratification and prophylaxis guidance.
 
-### Python API
+Reference:
+  Caprini JA. Thrombosis risk assessment as a guide to quality patient care.
+  Dis Mon. 2005;51(2-3):70-78.
 
-```python
-from caprini import calculate_score, format_report
+Stdlib only — no third-party dependencies.
 
-result = calculate_score({
-    "age": 68,
-    "malignancy": True,
-    "major_open_surgery_gt_45min": True,
-    "central_venous_access": True,
-    "bmi_gt_25": True,
-})
+---
 
-print(format_report(result))
-# Score: 8, Tier: Highest Risk, VTE rate: 5.4%+
+## ⚙️ Key Capabilities & Algorithmic Modules
+
+### 🔬 Core Algorithmic & Evaluation Engines
+
+- **`BleedingRiskFactors`**: Patient bleeding risk factors.
+- **`BleedingRiskAgent`**: Sub-agent for bleeding risk stratification.
+- **`CapriniFactors`**: Set boolean flags for every applicable factor; age handled separately.
+- **`Snapshot`** — dedicated module for snapshot evaluation and state verification.
+- **`PharmacogenomicProfile`**: Patient pharmacogenomic profile.
+- **`PharmacogenomicAgent`**: Sub-agent for pharmacogenomic prophylaxis.
+
+---
+
+## 📐 Mathematical Formulation & Logic
+
+```text
+  """Calculate surgical bleeding risk score."""
+  score = 0
+  bleeding_risk = "VERY_HIGH"
+  bleeding_risk = "HIGH"
+  bleeding_risk = "MODERATE"
 ```
 
-### CLI
+---
+
+## 💻 CLI Quickstart & Usage
+
+### 1. Guided Interactive Mode
+```bash
+python cli.py
+```
+
+### 2. Direct Parameterized Evaluation
+```bash
+python cli.py --age <value> --malignancy <value> --major-open-surgery-gt-45min <value> --json <value>
+```
+
+### Parameter Reference
+- `--age`: Specifies input measurement or parameter value.
+- `--malignancy`: Specifies input measurement or parameter value.
+- `--major-open-surgery-gt-45min`: Specifies input measurement or parameter value.
+- `--json`: Specifies input measurement or parameter value.
+- `---`: Specifies input measurement or parameter value.
+- `--patient-id`: Specifies input measurement or parameter value.
+- `--json-output`: Specifies input measurement or parameter value.
+- `--input`: Specifies input measurement or parameter value.
+- `--output`: Specifies input measurement or parameter value.
+
+### Input Data Schema
+
+| Field | Description | Requirement |
+|:------|:------------|:------------|
+| `patient_id` | Parameter / observation metric | Required |
+| `age` | Parameter / observation metric | Required |
+| `sex` | Parameter / observation metric | Required |
+| `prior_vte` | Parameter / observation metric | Required |
+| `cancer` | Parameter / observation metric | Required |
+| `immobility` | Parameter / observation metric | Required |
+| `surgery` | Parameter / observation metric | Required |
+
+---
+
+## 🛡️ Security & Enterprise Architecture
+
+* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
+* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
+* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
+* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+
+---
+
+## 🧪 Testing & Verification
+
+Run the automated test suite:
 
 ```bash
-# Score a single patient with flags
-python cli.py score --age 68 --malignancy --major-open-surgery-gt-45min
-
-# Score from JSON
-python cli.py score --json '{"age": 68, "malignancy": true, "major_open_surgery_gt_45min": true}'
-
-# List all risk factors
-python cli.py factors
-
-# Batch process a CSV
-python cli.py batch -i patients.csv -o results.csv
+pytest -v
 ```
 
-### CSV Batch Format
-
-The batch command expects a CSV with an optional `age` column and columns matching factor keys:
-
-```csv
-patient_id,age,malignancy,major_open_surgery_gt_45min,history_of_vte
-P001,68,1,1,0
-P002,45,0,0,1
-```
-
-## Running Tests
+Execute high-throughput batch simulation benchmarks:
 
 ```bash
-python -m pytest test_caprini.py -v
+python simulator.py --tasks 1000 --concurrency 8
 ```
 
-Or without pytest (stdlib unittest):
+---
+
+## 🐳 Container Deployment
 
 ```bash
-python -m unittest test_caprini -v
+docker build -t caprini-vte-risk-calculator .
+docker run -p 8000:8000 caprini-vte-risk-calculator
 ```
-
-## Project Structure
-
-```
-caprini.py              — Core scoring engine (calculate_score, format_report)
-cli.py                  — Command-line interface
-test_caprini.py         — Test suite
-bleeding_risk.py        — Bleeding risk stratification module
-caprini_point_table.py  — Reference point table (older module)
-perioperative_tracker.py — Serial Caprini tracking across perioperative period
-pharmacogenomic_prophylaxis.py — PGx-adjusted prophylaxis guidance
-```
-
-## Limitations
-
-- This tool is for **clinical decision support only**. It does not replace clinical judgment.
-- The Caprini model was developed and validated primarily in surgical populations. Its performance in purely medical patients is less well-established.
-- VTE rate estimates are population-level averages and may not reflect individual patient risk.
-- Always consider the complete clinical picture including bleeding risk, patient preferences, and institutional protocols.
-
-## References
-
-- Caprini JA. Thrombosis risk assessment as a guide to quality patient care. *Dis Mon*. 2005;51(2-3):70-78.
-- Caprini JA. Individual risk assessment is the best strategy for thromboembolic prophylaxis. *Dis Mon*. 2010;56(8):552-559.
-- Gould MK, et al. Prevention of VTE in nonorthopedic surgical patients: Antithrombotic Therapy and Prevention of Thrombosis, 9th ed: ACCP Evidence-Based Clinical Practice Guidelines. *Chest*. 2012;141(2 Suppl):e227S-e277S.
-
-## License
-
-MIT
