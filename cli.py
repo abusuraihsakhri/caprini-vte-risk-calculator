@@ -110,13 +110,61 @@ def cmd_batch(args: argparse.Namespace) -> int:
                     pass
                 break
 
-        # Map other columns: check if column name matches a factor key
+        # Map other columns: check if column name matches a factor key or common clinical synonyms
+        column_aliases = {
+            "minor_surgery": "minor_surgery_lt_45min",
+            "minor_surgery_planned": "minor_surgery_lt_45min",
+            "major_surgery": "major_open_surgery_gt_45min",
+            "major_open_surgery": "major_open_surgery_gt_45min",
+            "major_surgery_gt_45min": "major_open_surgery_gt_45min",
+            "laparoscopic": "laparoscopic_surgery_gt_45min",
+            "laparoscopic_surgery": "laparoscopic_surgery_gt_45min",
+            "elective_arthroplasty": "elective_lea",
+            "arthroplasty": "elective_lea",
+            "cancer": "malignancy",
+            "malignancy_present": "malignancy",
+            "bed_rest": "bed_rest_gt_72h",
+            "immobility": "bed_rest_gt_72h",
+            "central_line": "central_venous_access",
+            "prior_vte": "history_of_vte",
+            "dvt_pe_history": "history_of_vte",
+            "family_vte": "family_history_of_vte",
+            "stroke": "stroke_lt_1mo",
+            "spinal_cord_injury": "acute_spinal_cord_injury_lt_1mo",
+            "trauma": "multiple_trauma_lt_1mo",
+            "sepsis": "sepsis_lt_1mo",
+            "swollen_legs": "swollen_legs",
+            "varicose_veins": "varicose_veins",
+            "factor_v_leiden": "factor_v_leiden",
+            "prothrombin_20210a": "prothrombin_20210a",
+            "antiphospholipid": "lupus_anticoagulant",
+        }
+
+        # Normalize row keys for flexible lookup
+        normalized_row = {k.strip().lower().replace("-", "_"): v for k, v in row.items()}
+
+        # Check BMI numeric column if present
+        for bmi_col in ("bmi", "body_mass_index"):
+            if bmi_col in normalized_row and normalized_row[bmi_col]:
+                try:
+                    if float(normalized_row[bmi_col]) > 25:
+                        factors["bmi_gt_25"] = True
+                except ValueError:
+                    pass
+
         for key, _, _ in RISK_FACTORS:
             if key in AGE_KEYS:
                 continue
-            val = row.get(key, row.get(key.replace("_", "-"), ""))
-            if str(val).strip().lower() in ("1", "true", "yes", "y"):
+            val = normalized_row.get(key)
+            if str(val).strip().lower() in ("1", "true", "yes", "y", "present"):
                 factors[key] = True
+
+        # Check alias keys
+        for alias, target_key in column_aliases.items():
+            if alias in normalized_row:
+                val = normalized_row.get(alias)
+                if str(val).strip().lower() in ("1", "true", "yes", "y", "present"):
+                    factors[target_key] = True
 
         result = calculate_score(factors)
         out_row = dict(row)

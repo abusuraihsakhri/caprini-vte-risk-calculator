@@ -1,4 +1,11 @@
-patient_id,age,sex,prior_vte,cancer,immobility,surgery
-P001,68,M,0,1,1,0
-P002,45,F,0,0,0,1
-P003,71,M,1,0,1,1
+patient_id,age,bmi_gt_25,minor_surgery_lt_45min,major_open_surgery_gt_45min,laparoscopic_surgery_gt_45min,elective_lea,varicose_veins,swollen_legs,sepsis_lt_1mo,malignancy,bed_rest_gt_72h,central_venous_access,history_of_vte,factor_v_leiden,prothrombin_20210a,lupus_anticoagulant,stroke_lt_1mo,acute_spinal_cord_injury_lt_1mo,expected_caprini_score,expected_risk_tier,accp_recommended_prophylaxis
+PT-001,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,Lowest Risk,"Early frequent ambulation alone; no pharmacologic or mechanical prophylaxis needed"
+PT-002,48,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,Low Risk,"Mechanical prophylaxis with intermittent pneumatic compression (IPC/SCDs); early ambulation"
+PT-003,55,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,Moderate Risk,"Pneumatic compression (IPC) + consider pharmacologic thromboprophylaxis (LMWH 40mg SC daily or UFH 5000U q8-12h)"
+PT-004,65,1,0,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,9,Highest Risk,"Dual prophylaxis: LMWH (enoxaparin 40mg SC daily) or UFH + IPC/SCDs; extended-duration post-discharge"
+PT-005,72,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,0,12,Highest Risk,"Dual prophylaxis: LMWH/UFH + IPC; extended-duration LMWH post-discharge (28-35 days for total arthroplasty)"
+PT-006,78,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,8,Highest Risk,"Pharmacologic prophylaxis (LMWH or UFH) + IPC/SCDs; monitor neuro deficits and bleeding parameters"
+PT-007,63,0,0,0,1,0,1,0,1,1,0,1,0,1,0,0,0,0,13,Highest Risk,"Extended pharmacologic LMWH (28 days post-op for cancer resection) + mechanical IPC/SCDs; central line care"
+PT-008,52,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,6,High Risk,"LMWH 40mg SC once daily or UFH 5000U SC q8h + mechanical compression (IPC); evaluate thrombophilia duration"
+PT-009,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,6,High Risk,"Mechanical IPC immediately; add pharmacological LMWH/UFH once intracerebral hemorrhage ruled out/stable"
+PT-010,81,1,0,1,0,0,1,1,0,1,1,1,1,0,0,1,0,0,20,Highest Risk,"Intensive dual thromboprophylaxis (LMWH + IPC); extended post-discharge anticoagulation up to 35 days; nephrology dose adjust"
