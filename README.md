@@ -1,5 +1,7 @@
 # Caprini VTE Risk Calculator
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/caprini-vte-risk-calculator/)
+
 A small, dependency-free implementation of the Caprini venous thromboembolism (VTE) risk score, with a browser interface and command-line tools.
 
 The risk-factor weights follow the Caprini table reproduced in the 2012 American College of Chest Physicians (CHEST/AT9) guideline for nonorthopedic surgical patients. The displayed VTE strata and prophylaxis summary are scoped to **general and abdominal-pelvic surgery** in that guideline; orthopedic, trauma, spinal-cord-injury, and other populations require their relevant specialty guidance.
