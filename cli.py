@@ -1,43 +1,61 @@
 #!/usr/bin/env python3
-"""
-CLI for the Caprini VTE Risk Score Calculator.
+"""Command-line interface for the Caprini VTE risk calculator."""
 
-Usage:
-    python cli.py score --age 65 --malignancy --major-open-surgery-gt-45min
-    python cli.py score --json '{"age": 65, "malignancy": true, "major_open_surgery_gt_45min": true}'
-    python cli.py factors
-    python cli.py batch -i input.csv -o results.csv
-
-Stdlib only.
-"""
+from __future__ import annotations
 
 import argparse
 import csv
 import json
 import sys
 
-from caprini import (
-    calculate_score,
-    format_report,
-    get_all_factors,
-    FACTOR_POINTS,
-    RISK_FACTORS,
-    AGE_KEYS,
-)
+from caprini import AGE_KEYS, RISK_FACTORS, calculate_score, format_report, get_all_factors
+
+TRUE_VALUES = {"1", "true", "yes", "y", "present"}
+
+COLUMN_ALIASES = {
+    "minor_surgery": "minor_surgery_lt_45min",
+    "minor_surgery_planned": "minor_surgery_lt_45min",
+    "arthroscopy": "arthroscopic_surgery",
+    "arthroscopic_surgery_gt_45min": "arthroscopic_surgery",
+    "major_surgery": "major_open_surgery_gt_45min",
+    "major_open_surgery": "major_open_surgery_gt_45min",
+    "major_surgery_gt_45min": "major_open_surgery_gt_45min",
+    "laparoscopic": "laparoscopic_surgery_gt_45min",
+    "laparoscopic_surgery": "laparoscopic_surgery_gt_45min",
+    "elective_arthroplasty": "elective_lea",
+    "arthroplasty": "elective_lea",
+    "cancer": "malignancy",
+    "malignancy_present": "malignancy",
+    "bed_rest": "bed_rest_gt_72h",
+    "immobility": "bed_rest_gt_72h",
+    "central_line": "central_venous_access",
+    "prior_vte": "history_of_vte",
+    "dvt_pe_history": "history_of_vte",
+    "family_vte": "family_history_of_vte",
+    "stroke": "stroke_lt_1mo",
+    "spinal_cord_injury": "acute_spinal_cord_injury_lt_1mo",
+    "trauma": "multiple_trauma_lt_1mo",
+    "sepsis": "sepsis_lt_1mo",
+    "antiphospholipid": "lupus_anticoagulant",
+}
+
+
+def _is_true(value: object) -> bool:
+    return str(value).strip().lower() in TRUE_VALUES
 
 
 def _add_factor_args(parser: argparse.ArgumentParser) -> None:
-    """Add a CLI flag for every Caprini risk factor."""
-    parser.add_argument("--age", type=float, default=None,
-                        help="Patient age (auto-selects age bracket)")
-    for key, label, pts in RISK_FACTORS:
-        flag = "--" + key.replace("_", "-")
-        parser.add_argument(flag, action="store_true", default=False,
-                            help=f"[{pts}pt] {label}")
+    parser.add_argument("--age", type=float, default=None, help="Patient age in years")
+    for key, label, points in RISK_FACTORS:
+        parser.add_argument(
+            "--" + key.replace("_", "-"),
+            action="store_true",
+            default=False,
+            help=f"[{points} pt] {label}",
+        )
 
 
 def _args_to_factors(args: argparse.Namespace) -> dict:
-    """Convert parsed argparse namespace into a factors dict."""
     factors = {}
     if args.age is not None:
         factors["age"] = args.age
@@ -48,137 +66,109 @@ def _args_to_factors(args: argparse.Namespace) -> dict:
 
 
 def cmd_score(args: argparse.Namespace) -> int:
-    """Handle the 'score' subcommand."""
-    if args.json:
-        try:
-            factors = json.loads(args.json)
-        except json.JSONDecodeError as e:
-            print(f"Error: invalid JSON: {e}", file=sys.stderr)
-            return 1
-    else:
-        factors = _args_to_factors(args)
+    try:
+        factors = json.loads(args.json) if args.json else _args_to_factors(args)
+        if not isinstance(factors, dict):
+            raise ValueError("JSON input must be an object")
+        result = calculate_score(factors)
+    except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
 
-    result = calculate_score(factors)
-    report = format_report(result, patient_id=args.patient_id)
-    print(report)
-
+    print(format_report(result, patient_id=args.patient_id))
     if args.json_output:
         print("\n--- JSON Output ---")
-        print(json.dumps(result, indent=2))
-
+        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
-def cmd_factors(args: argparse.Namespace) -> int:
-    """Handle the 'factors' subcommand — list all risk factors."""
-    factors = get_all_factors()
-    print("Caprini VTE Risk Factors")
-    print("=" * 56)
-    current_pts = None
-    for f in factors:
-        if f["points"] != current_pts:
-            current_pts = f["points"]
-            print(f"\n--- {current_pts} point{'s' if current_pts != 1 else ''} ---")
-        print(f"  {f['key']:42s}  {f['label']}")
-    print()
+def cmd_factors(_: argparse.Namespace) -> int:
+    print("Caprini VTE risk factors")
+    print("=" * 64)
+    current_points = None
+    for factor in get_all_factors():
+        if factor["points"] != current_points:
+            current_points = factor["points"]
+            print(f"\n{current_points}-point factors")
+        print(f"  {factor['key']:42s} {factor['label']}")
     return 0
+
+
+def _row_to_factors(row: dict) -> dict:
+    normalized = {
+        str(key).strip().lower().replace("-", "_"): value
+        for key, value in row.items()
+        if key is not None
+    }
+    factors = {}
+
+    for age_column in ("age", "age_years"):
+        value = normalized.get(age_column)
+        if value not in (None, ""):
+            try:
+                factors["age"] = float(value)
+            except (TypeError, ValueError):
+                pass
+            break
+
+    for bmi_column in ("bmi", "body_mass_index"):
+        value = normalized.get(bmi_column)
+        if value not in (None, ""):
+            try:
+                if float(value) > 25:
+                    factors["bmi_gt_25"] = True
+            except (TypeError, ValueError):
+                pass
+            break
+
+    for key, _, _ in RISK_FACTORS:
+        if key in AGE_KEYS:
+            continue
+        if _is_true(normalized.get(key, "")):
+            factors[key] = True
+
+    for alias, target in COLUMN_ALIASES.items():
+        if _is_true(normalized.get(alias, "")):
+            factors[target] = True
+
+    return factors
 
 
 def cmd_batch(args: argparse.Namespace) -> int:
-    """Handle the 'batch' subcommand — process a CSV file."""
     try:
-        with open(args.input, newline="", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            fieldnames = list(reader.fieldnames or [])
+        with open(args.input, newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            if not reader.fieldnames:
+                print("Error: input CSV has no header", file=sys.stderr)
+                return 2
+            fieldnames = list(reader.fieldnames)
             rows = list(reader)
     except FileNotFoundError:
         print(f"Error: file not found: {args.input}", file=sys.stderr)
-        return 1
+        return 2
 
-    out_fields = fieldnames + ["caprini_score", "risk_tier", "vte_rate",
-                                "active_factors", "prophylaxis_summary"]
+    added_fields = ["caprini_score", "risk_tier", "vte_rate", "active_factors", "prophylaxis_summary"]
+    out_fields = fieldnames + [field for field in added_fields if field not in fieldnames]
     out_rows = []
-    for row in rows:
-        # Convert CSV values to factors dict
-        factors = {}
-        # Try to find an age column
-        for age_col in ("age", "Age", "AGE"):
-            if age_col in row and row[age_col]:
-                try:
-                    factors["age"] = float(row[age_col])
-                except ValueError:
-                    pass
-                break
 
-        # Map other columns: check if column name matches a factor key or common clinical synonyms
-        column_aliases = {
-            "minor_surgery": "minor_surgery_lt_45min",
-            "minor_surgery_planned": "minor_surgery_lt_45min",
-            "major_surgery": "major_open_surgery_gt_45min",
-            "major_open_surgery": "major_open_surgery_gt_45min",
-            "major_surgery_gt_45min": "major_open_surgery_gt_45min",
-            "laparoscopic": "laparoscopic_surgery_gt_45min",
-            "laparoscopic_surgery": "laparoscopic_surgery_gt_45min",
-            "elective_arthroplasty": "elective_lea",
-            "arthroplasty": "elective_lea",
-            "cancer": "malignancy",
-            "malignancy_present": "malignancy",
-            "bed_rest": "bed_rest_gt_72h",
-            "immobility": "bed_rest_gt_72h",
-            "central_line": "central_venous_access",
-            "prior_vte": "history_of_vte",
-            "dvt_pe_history": "history_of_vte",
-            "family_vte": "family_history_of_vte",
-            "stroke": "stroke_lt_1mo",
-            "spinal_cord_injury": "acute_spinal_cord_injury_lt_1mo",
-            "trauma": "multiple_trauma_lt_1mo",
-            "sepsis": "sepsis_lt_1mo",
-            "swollen_legs": "swollen_legs",
-            "varicose_veins": "varicose_veins",
-            "factor_v_leiden": "factor_v_leiden",
-            "prothrombin_20210a": "prothrombin_20210a",
-            "antiphospholipid": "lupus_anticoagulant",
-        }
-
-        # Normalize row keys for flexible lookup
-        normalized_row = {k.strip().lower().replace("-", "_"): v for k, v in row.items()}
-
-        # Check BMI numeric column if present
-        for bmi_col in ("bmi", "body_mass_index"):
-            if bmi_col in normalized_row and normalized_row[bmi_col]:
-                try:
-                    if float(normalized_row[bmi_col]) > 25:
-                        factors["bmi_gt_25"] = True
-                except ValueError:
-                    pass
-
-        for key, _, _ in RISK_FACTORS:
-            if key in AGE_KEYS:
-                continue
-            val = normalized_row.get(key)
-            if str(val).strip().lower() in ("1", "true", "yes", "y", "present"):
-                factors[key] = True
-
-        # Check alias keys
-        for alias, target_key in column_aliases.items():
-            if alias in normalized_row:
-                val = normalized_row.get(alias)
-                if str(val).strip().lower() in ("1", "true", "yes", "y", "present"):
-                    factors[target_key] = True
-
-        result = calculate_score(factors)
-        out_row = dict(row)
-        out_row["caprini_score"] = result["score"]
-        out_row["risk_tier"] = result["risk_tier"]
-        out_row["vte_rate"] = f"{result['vte_rate']:.1%}"
-        out_row["active_factors"] = "; ".join(
-            f"{k}({v})" for k, v in result["active_factors"].items()
+    for line_number, row in enumerate(rows, start=2):
+        try:
+            result = calculate_score(_row_to_factors(row))
+        except ValueError as exc:
+            print(f"Error on CSV line {line_number}: {exc}", file=sys.stderr)
+            return 2
+        output = dict(row)
+        output["caprini_score"] = result["score"]
+        output["risk_tier"] = result["risk_tier"]
+        output["vte_rate"] = f"{result['vte_rate']:.1%}"
+        output["active_factors"] = "; ".join(
+            f"{key}({points})" for key, points in result["active_factors"].items()
         )
-        out_row["prophylaxis_summary"] = " | ".join(result["prophylaxis"])
-        out_rows.append(out_row)
+        output["prophylaxis_summary"] = " | ".join(result["prophylaxis"])
+        out_rows.append(output)
 
-    with open(args.output, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
+    with open(args.output, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=out_fields)
         writer.writeheader()
         writer.writerows(out_rows)
 
@@ -189,44 +179,36 @@ def cmd_batch(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="caprini",
-        description="Caprini VTE Risk Score Calculator — clinical decision support tool",
+        description="Caprini VTE risk score calculator (CHEST 2012 general/abdominal-pelvic surgery mapping)",
     )
-    sub = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command")
 
-    # --- score ---
-    p_score = sub.add_parser("score", help="Calculate Caprini score for a single patient")
-    _add_factor_args(p_score)
-    p_score.add_argument("--json", default=None,
-                         help="Pass all factors as a JSON string (overrides flags)")
-    p_score.add_argument("--patient-id", default=None, help="Optional patient identifier")
-    p_score.add_argument("--json-output", action="store_true",
-                         help="Also print raw JSON result")
+    score = subparsers.add_parser("score", help="Calculate one Caprini score")
+    _add_factor_args(score)
+    score.add_argument("--json", default=None, help="JSON object of factors; overrides flags")
+    score.add_argument("--patient-id", default=None, help="Optional local report identifier")
+    score.add_argument("--json-output", action="store_true", help="Print machine-readable result")
 
-    # --- factors ---
-    sub.add_parser("factors", help="List all Caprini risk factors")
+    subparsers.add_parser("factors", help="List factor keys and point values")
 
-    # --- batch ---
-    p_batch = sub.add_parser("batch", help="Batch-process a CSV file of patients")
-    p_batch.add_argument("-i", "--input", required=True, help="Input CSV path")
-    p_batch.add_argument("-o", "--output", default="results.csv", help="Output CSV path")
-
+    batch = subparsers.add_parser("batch", help="Batch-process a CSV file")
+    batch.add_argument("-i", "--input", required=True, help="Input CSV path")
+    batch.add_argument("-o", "--output", default="results.csv", help="Output CSV path")
     return parser
 
 
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-
     if args.command == "score":
         return cmd_score(args)
-    elif args.command == "factors":
+    if args.command == "factors":
         return cmd_factors(args)
-    elif args.command == "batch":
+    if args.command == "batch":
         return cmd_batch(args)
-    else:
-        parser.print_help()
-        return 1
+    parser.print_help()
+    return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
