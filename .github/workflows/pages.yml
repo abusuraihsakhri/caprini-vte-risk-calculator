@@ -33,3 +33,16 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Verify live site
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          for asset in "" styles.css caprini.mjs app.mjs; do
+            curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+              "${SITE_URL}${asset}" -o "/tmp/${asset:-index.html}"
+          done
+          grep -F "Caprini VTE Risk Calculator" /tmp/index.html >/dev/null
+          grep -F ".app-shell" /tmp/styles.css >/dev/null
+          grep -F "calculateScore" /tmp/caprini.mjs >/dev/null
+          grep -F "renderFactors" /tmp/app.mjs >/dev/null
