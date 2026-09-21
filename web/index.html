@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Browser-based Caprini VTE risk score calculator with CHEST 2012 general and abdominal-pelvic surgery risk strata.">
+  <title>Caprini VTE Risk Calculator</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Caprini VTE Risk Calculator</h1>
+        <p>Caprini score with CHEST 2012 general/abdominal-pelvic surgical risk strata</p>
+      </div>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch theme">Light / Dark</button>
+    </header>
+
+    <section class="workspace" aria-label="Caprini calculator workspace">
+      <section class="panel form-panel" aria-labelledby="assessment-title">
+        <div class="panel-header">
+          <h2 id="assessment-title">Risk factors</h2>
+          <span class="counter" id="selected-count">0 active factors</span>
+        </div>
+
+        <div class="age-row">
+          <div class="field">
+            <label for="age">Age (years)</label>
+            <input id="age" type="number" min="0" max="130" inputmode="decimal" placeholder="e.g. 68">
+          </div>
+          <p class="help">Age points are assigned automatically. Select all other factors that apply; point groups are separated into tabs to keep the page compact.</p>
+        </div>
+
+        <nav class="tabs" id="tabs" aria-label="Risk factor point groups">
+          <button class="active" type="button" data-points="1">1 point</button>
+          <button type="button" data-points="2">2 points</button>
+          <button type="button" data-points="3">3 points</button>
+          <button type="button" data-points="5">5 points</button>
+        </nav>
+
+        <div class="factor-list" id="factor-list" aria-live="polite"></div>
+
+        <div class="actions">
+          <button class="primary" id="calculate" type="button">Calculate risk</button>
+          <button class="secondary" id="reset" type="button">Reset</button>
+        </div>
+      </section>
+
+      <aside class="panel results-panel" aria-labelledby="result-title">
+        <div class="panel-header">
+          <h2 id="result-title">Result</h2>
+          <span class="counter">Local calculation</span>
+        </div>
+
+        <div class="metrics" aria-label="Calculated risk summary">
+          <div class="metric"><span>Score</span><strong id="score-value">0</strong></div>
+          <div class="metric"><span>Risk stratum</span><strong id="tier-value">Very Low</strong></div>
+          <div class="metric"><span>Baseline VTE risk</span><strong id="rate-value">0.5%</strong></div>
+          <div class="metric"><span>Active factors</span><strong id="active-value">0</strong></div>
+        </div>
+
+        <div id="error-box" class="error" role="alert" hidden></div>
+        <div class="guidance" id="guidance"></div>
+      </aside>
+    </section>
+
+    <footer class="footer-note">
+      <span>Clinical decision-support only. Verify against local policy and population-specific guidance.</span>
+      <span>No patient data leaves the browser.</span>
+    </footer>
+  </main>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>

@@ -1,8 +1,5 @@
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
 .pytest_cache/
 .coverage
 htmlcov/
@@ -20,4 +17,3 @@ test_batch_*.csv
 *.log
 .DS_Store
 Thumbs.db
-

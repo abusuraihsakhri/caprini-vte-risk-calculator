@@ -1,101 +1,71 @@
-# Caprini VTE Risk Assessment & Thromboprophylaxis Engine
+# Caprini VTE Risk Calculator
 
-A clinically validated, pure Python risk assessment engine implementing the **Caprini Risk Assessment Model (RAM) for Venous Thromboembolism (VTE)** (Caprini JA. *Dis Mon* 2005; revised 2009/2013) and American College of Chest Physicians (**ACCP/CHEST 2012**) perioperative thromboprophylaxis clinical practice guidelines.
+A small, dependency-free implementation of the Caprini venous thromboembolism (VTE) risk score, with a browser interface and command-line tools.
 
----
-
-## Caprini Risk Assessment Model (RAM) Architecture
-
-The Caprini score stratifies surgical and medical inpatients into evidence-based VTE risk tiers to guide mechanical and pharmacological thromboprophylaxis.
-
-### Point Valuation Schema
-
-| Point Value | Risk Factors |
-|:---|:---|
-| **1 Point Each** | Age 41–60 yrs, Minor surgery, BMI $> 25\text{ kg/m}^2$, Swollen legs, Varicose veins, Pregnancy / postpartum ($<1\text{ mo}$), History of unexplained abortion ($\ge 3$), Oral contraceptives / HRT, Sepsis ($<1\text{ mo}$), Serious lung disease / pneumonia ($<1\text{ mo}$), Abnormal pulmonary function, Acute MI ($<1\text{ mo}$), CHF ($<1\text{ mo}$), History of inflammatory bowel disease, Medical patient on bed rest |
-| **2 Points Each** | Age 61–74 yrs, Major open surgery ($>45\text{ min}$), Laparoscopic surgery ($>45\text{ min}$), Malignancy (present or previous), Confined to bed ($>72\text{ hours}$), Immobilizing plaster cast, Central venous access |
-| **3 Points Each** | Age $\ge 75\text{ yrs}$, History of VTE (DVT/PE), Family history of VTE, Factor V Leiden, Prothrombin 20210A, Elevated serum homocysteine, Positive lupus anticoagulant, Elevated anticardiolipin antibodies, Other congenital/acquired thrombophilia |
-| **5 Points Each** | Elective major lower extremity arthroplasty (total hip/knee), Hip / pelvis / leg fracture ($<1\text{ mo}$), Stroke ($<1\text{ mo}$), Multiple trauma ($<1\text{ mo}$), Acute spinal cord injury ($<1\text{ mo}$) |
-
----
-
-### Risk Categories & CHEST 2012 Recommendations
-
-| Caprini Score | Risk Tier | 30-Day VTE Risk (No Prophylaxis) | Recommended Prophylaxis |
-|:---|:---|:---|:---|
-| **0** | **Lowest Risk** | $\sim 0.5\%$ | Early, frequent ambulation alone |
-| **1 – 2** | **Low Risk** | $\sim 1.5\%$ | Mechanical prophylaxis: Intermittent Pneumatic Compression (IPC) devices |
-| **3 – 4** | **Moderate Risk** | $\sim 3.0\%$ | Pharmacological (LMWH or low-dose UFH) OR Mechanical (IPC); dual if high bleeding risk |
-| **5 – 8** | **High Risk** | $\sim 6.0\%$ | Pharmacological (LMWH or low-dose UFH) AND Mechanical (IPC/GCS) dual prophylaxis |
-| $\ge 9$ | **Highest Risk** | $\sim 11.0\%$ | Pharmacological (LMWH or low-dose UFH) AND Mechanical (IPC) extended duration (e.g. 28–35 days for major abdominal/pelvic cancer or orthopedic surgery) |
-
----
+The risk-factor weights follow the Caprini table reproduced in the 2012 American College of Chest Physicians (CHEST/AT9) guideline for nonorthopedic surgical patients. The displayed VTE strata and prophylaxis summary are scoped to **general and abdominal-pelvic surgery** in that guideline; orthopedic, trauma, spinal-cord-injury, and other populations require their relevant specialty guidance.
 
 ## Features
 
-- **Standardized Caprini RAM Scoring:** Evaluates comprehensive clinical, surgical, and hypercoagulable risk factors.
-- **Bleeding Risk Harmonization:** Balances thrombosis prevention against surgical bleeding risk.
-- **Batch CSV Processing:** High-throughput batch triage for hospital pre-admission and surgical scheduling workflows.
-- **Zero Runtime Dependencies:** Pure Python implementation relying strictly on the Python Standard Library.
+- 38 Caprini risk factors with automatic age scoring.
+- CHEST/AT9 strata: score 0 very low, 1–2 low, 3–4 moderate, and ≥5 high risk.
+- Conditional prophylaxis summary without hard-coded drug doses.
+- Batch CSV processing and human-readable CLI reports.
+- Static browser calculator that runs entirely on-device; no patient data is sent to a server.
+- Light and dark themes, keyboard-accessible controls, and a compact responsive layout.
+- Python standard library only at runtime.
 
----
+## Browser application
 
-## Installation & Requirements
+The `web/` directory is a static GitHub Pages application. It uses a small JavaScript scoring module rather than Pyodide so the calculator loads quickly and has no Python/WASM runtime dependency. CI runs browser scoring smoke tests to reduce drift from the Python implementation.
 
-- Python 3.10+ (tested on 3.10, 3.11, 3.12)
-- Zero external runtime dependencies.
+## CLI
 
 ```bash
-git clone https://github.com/abusuraihsakhri/caprini-vte-risk-calculator.git
-cd caprini-vte-risk-calculator
-```
-
----
-
-## CLI Usage
-
-### 1. Calculate Score for a Surgical Patient
-```bash
-python cli.py calc --age 68 --major-open-surgery-gt-45min --malignancy --central-venous-access
-```
-
-### 2. High-Risk Orthopedic Arthroplasty Case
-```bash
-python cli.py calc --age 76 --elective-major-lower-extremity-arthroplasty --prior-vte
-```
-
-### 3. Batch Process Patient Cohorts from CSV
-```bash
+python cli.py score --age 68 --malignancy --major-open-surgery-gt-45min
+python cli.py score --json '{"age": 68, "malignancy": true}' --json-output
+python cli.py factors
 python cli.py batch -i sample.csv -o results.csv
 ```
 
----
-
-## Python API Quickstart
+## Python API
 
 ```python
-from caprini import calculate_caprini_score, CapriniFactors
+from caprini import calculate_score
 
-factors = CapriniFactors(
-    age=65,
-    major_open_surgery_gt_45min=True,
-    malignancy=True,
-    central_venous_access=True
-)
+result = calculate_score({
+    "age": 68,
+    "malignancy": True,
+    "major_open_surgery_gt_45min": True,
+})
 
-result = calculate_caprini_score(factors)
-print(f"Caprini Score: {result.score}")
-print(f"Risk Category: {result.risk_level.value}")
-print(f"Recommended Prophylaxis: {result.recommended_prophylaxis}")
+print(result["score"])
+print(result["risk_tier"])
 ```
 
----
-
-## Testing & Verification
-
-Run the test suite:
+## Testing
 
 ```bash
-python -m pytest -p no:zarr
+python -m pip install pytest
+python -m pytest -q
+node web/test.mjs
 ```
 
+GitHub Actions tests Python 3.10–3.13 and the browser scoring module.
+
+## Clinical scope
+
+This repository is a clinical decision-support and educational implementation. It does not diagnose VTE, assess all bleeding contraindications, or replace institutional policy or clinician judgment. The CHEST 2012 prophylaxis mapping used here is population-specific and should not be generalized to every surgical or medical population.
+
+Primary references:
+
+- Caprini JA. *Thrombosis risk assessment as a guide to quality patient care.* Dis Mon. 2005;51(2-3):70-78.
+- Gould MK, Garcia DA, Wren SM, et al. *Prevention of VTE in Nonorthopedic Surgical Patients: Antithrombotic Therapy and Prevention of Thrombosis, 9th ed.* Chest. 2012;141(2 Suppl):e227S-e277S.
+- Cronin M, Dengler N, Krauss ES, et al. *Completion of the Updated Caprini Risk Assessment Model (2013 Version).* Clin Appl Thromb Hemost. 2019;25:1076029619838052.
+
+## Privacy
+
+The browser version performs all calculations locally and does not transmit form values. The CLI and Python API perform local computation only.
+
+## License
+
+MIT. See `LICENSE`.
